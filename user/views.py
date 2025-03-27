@@ -35,22 +35,31 @@ class SignupView(APIView):
 
 class LoginView(APIView):
     def post(self, request):
+        """
+        Handles user login.
+        Only allows login for approved users.
+        """
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
             user = UserModel.get_user_by_email(data["email"])
 
-            if user and check_password(
-                data["password"], user[4]
-            ):  # user[4] is password
-                access_token, refresh_token = JWTHandler.generate_tokens(
-                    user[0]
-                )  # user[0] is id
-                return Response(
-                    {"access_token": access_token, "refresh_token": refresh_token},
-                    status=status.HTTP_200_OK,
-                )
+            if user and check_password(data["password"], user["password"]):
+                
 
-        return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
-        )
+                # Generate tokens for approved users
+                access_token, refresh_token = JWTHandler.generate_tokens(user["id"])
+                return Response({
+                    "message": "Login successful",
+                    "user": {
+                        "id": user["id"],
+                        "email": user["email"],
+                        "first_name": user["first_name"],
+                        "last_name": user["last_name"],
+                        "role_type": user["role_type"]
+                    },
+                    "access_token": access_token,
+                    "refresh_token": refresh_token
+                }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
